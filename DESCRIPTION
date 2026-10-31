@@ -1,0 +1,40 @@
+Package: sysbreak
+Title: Structural Breaks in a System of Equations
+Version: 1.1.0
+Authors@R: c(
+    person("Zhongjun", "Qu", , "qu@bu.edu", role = c("aut", "cre")),
+    person("Cheolju", "Kim", , "cheolju@bu.edu", role = "aut"),
+    person("Pierre", "Perron", role = "aut")
+  )
+Maintainer: Zhongjun Qu <qu@bu.edu>
+Description: Methods for detecting, estimating, and conducting inference
+    on multiple structural breaks in a linear system of equations, such as
+    multivariate linear regressions, seemingly unrelated regressions,
+    vector autoregressions, and network vector autoregressions. Breaks can
+    occur in the regression coefficients, the covariance matrix of the
+    errors, or both, and can be restricted to a subset of the
+    coefficients. The main function, sysbreak(), returns the number of
+    breaks detected and confidence intervals for the break dates and for
+    the regression coefficients. A separate function ordbreak() estimates
+    ordered breaks, in which a break in one subset of equations occurs
+    before a break in another. Specialized functions for vector
+    autoregressions varbreak() and network vector autoregressions
+    netbreak() are also provided. Reference: Qu, Z., and Perron, P.
+    (2007). 'Estimating and Testing Structural Changes in Multivariate
+    Regressions.' Econometrica, 75(2), 459-502.
+License: GPL (>= 3)
+Depends: R (>= 4.3.0)
+Suggests: knitr, rmarkdown, testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Encoding: UTF-8
+NeedsCompilation: no
+RoxygenNote: 7.3.2
+Imports: graphics, grDevices, MASS, stats, utils
+Config/testthat/edition: 3
+LazyData: true
+Packaged: 2026-10-20 19:49:01 UTC; qu
+Author: Zhongjun Qu [aut, cre],
+  Cheolju Kim [aut],
+  Pierre Perron [aut]
+Repository: CRAN
+Date/Publication: 2026-10-31 11:40:02 UTC

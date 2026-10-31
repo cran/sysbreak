@@ -1,0 +1,325 @@
+---
+title: "Introduction to sysbreak"
+author: "Cheolju Kim, Pierre Perron, Zhongjun Qu"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to sysbreak}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4
+)
+```
+
+## Overview
+
+The `sysbreak` package provides methods for detecting, estimating,
+and conducting inference on multiple structural breaks in a linear system
+of equations, such as multivariate linear regressions, seemingly
+unrelated regressions, vector autoregressions, and network vector
+autoregressions. Breaks can occur in the regression coefficients,
+the covariance matrix of the errors, or both, and can be restricted to a subset of
+the coefficients. 
+
+For observation \(t\) in regime \(j\),
+
+\[
+y_t = Z_t \beta_j + u_t,
+\quad t = T_{j-1}+1,\ldots,T_j,
+\quad j = 1,\ldots,m+1.
+\]
+
+The unknown break dates are \(T_1,\ldots,T_m\). The package searches over admissible partitions subject to a trimming rule. It determines the number of breaks, gives the estimated break dates, the regime-specific parameters, and confidence intervals.
+
+
+The main reference is Qu and Perron (2007), which develops estimation and testing for structural changes in multivariate regressions.
+
+## Main Functions
+
+The main user-facing functions are:
+
+- `sysbreak()` for a general linear system of equations, where the number of regressors can differ across equations.
+- `varbreak()` for structural breaks in VAR models.
+- `netbreak()` for structural breaks in Network models.
+- `ordbreak()` for ordered breaks in two sets of equations.
+- `brtype()` for tests of what changes at each break: the volatilities, the correlations, or the coefficients.
+- `dyspill()` for generalized Diebold-Yilmaz spillover measures from fitted VAR-type models.
+- `dynobreak()` for the same spillover measures from a VAR estimated on the whole sample without breaks, for comparison.
+
+## Basic Example
+
+This example uses simulated data with two breaks.
+
+```{r}
+library(sysbreak)
+
+set.seed(3)
+bigt <- 60
+x <- rnorm(bigt)
+
+beta <- rbind(
+  c(1.0,  0.5),
+  c(2.0, -0.2),
+  c(0.5,  0.8)
+)
+
+y <- numeric(bigt)
+y[1:20]  <- beta[1, 1] + beta[1, 2] * x[1:20]  + rnorm(20, sd = 0.4)
+y[21:40] <- beta[2, 1] + beta[2, 2] * x[21:40] + rnorm(20, sd = 0.4)
+y[41:60] <- beta[3, 1] + beta[3, 2] * x[41:60] + rnorm(20, sd = 0.4)
+
+df <- data.frame(y = y, x = x)
+```
+
+The model is given as a formula through `model`, with the data supplied in `data`. The intercept is included automatically. Which coefficients are allowed to change is controlled by `coef_breaks`; the default `"all"` lets every coefficient change across regimes. The model is estimated by:
+
+```{r}
+fit <- sysbreak(y ~ x, data = df, m = 2)
+```
+
+The results are summarized by:
+
+```{r}
+summary(fit)
+```
+
+The output reports the tests used to select the number of breaks (WDmax and the sequential test of one against two breaks), the selected number of breaks, the break dates with their confidence intervals, and the coefficient estimates in each regime. Both tests reject, and two breaks are selected. The break dates and their confidence intervals are reported as rows of `df`. They are returned by `confint()`, and the regime coefficients by `coef()`; their covariance matrix is returned by `vcov()`:
+
+```{r}
+confint(fit)
+coef(fit)
+```
+
+The fit can be plotted. Each series is plotted with the estimated break dates, their confidence intervals and the fitted values:
+
+```{r}
+plot(fit)
+```
+
+The SupLR statistics for one and two breaks, together with the other test results, are stored in `fit$testing`; see the next section.
+
+## Output Structure
+
+The methods shown above extract the main results; `residuals()`, `fitted()` and `nobs()` are also available. The components returned by `sysbreak()`, `varbreak()`, and `netbreak()` are:
+
+- `spec`: the fitted specification, including `m`, `trim`, sample size,
+  equation and coefficient dimensions, break options, and
+  coefficient and observation names.
+- `testing`: the tests, reported at `test_level`: `statistic`, testing no
+  break against \(k\) breaks for \(k = 1,\ldots,m\), with its
+  `critical_values`; `statistic_type` (`"SupLR"`, `"SupF"`, or missing when a
+  requested robust test is unavailable); `wdmax` and
+  `wdmax_critical_values`; the `sequential` tests of \(l\) against \(l+1\)
+  breaks, each containing `l`, a `statistic` and its `critical_values`; and
+  the number of `changing_parameters`.
+- `br_selected`: the selected number of breaks at `test_level`, with the
+  WDmax and sequential decisions that led to that result.
+- `estimation`: the estimates for the selected number of breaks: `breaks`,
+  regime-stacked `coefficients`, their covariance matrix `vcov`, stacked
+  error `covariance` matrices, break-date confidence intervals
+  `ci_breaks`, and the `residuals`. It is `NULL` when no break is selected; `coef()`, `vcov()`,
+  `confint()` and `residuals()` then stop with a message that points to
+  `testing`.
+- `y`: the responses used in estimation.
+
+`varbreak()` and `netbreak()` also return `spillover` when `h` is
+supplied and at least one break is selected.
+
+## Restricted Estimation
+
+Instead of letting every coefficient change, the breaks can be restricted to a subset of the coefficients. The argument `coef_breaks` then takes a list of formulas, one per equation: the left-hand side identifies the equation and the right-hand side the coefficients that are allowed to change. All other coefficients are held constant across regimes.
+
+To illustrate, the data below keep the intercept at 1 in all regimes and let only the slope on `x` change, at the same dates as before:
+
+```{r}
+set.seed(13)
+y_r <- 1 + rep(c(0.5, -0.2, 0.8), each = 20) * x + rnorm(bigt, sd = 0.4)
+df_r <- data.frame(y = y_r, x = x)
+```
+
+The model with only the slope allowed to change is estimated by:
+
+```{r}
+restricted_fit <- sysbreak(y ~ x, data = df_r, m = 2, coef_breaks = list(y ~ x))
+summary(restricted_fit)
+```
+
+Two breaks are selected, at rows 20 and 40. The critical values are smaller than in the basic example, because fewer coefficients change. The line `Coefficients allowed to change` lists the coefficients that change; the intercept is estimated from the whole sample and is therefore the same in the three regimes. The returned components describe this restricted model; an unrestricted fit is not returned.
+
+A pure covariance-break model (no coefficient changes) is obtained with `coef_breaks = "none"` together with `brv = TRUE`.
+With `robust = "hc"` or `"hac"`, a covariance-only robust test is not implemented, so
+the test statistic and its type are returned as missing.
+
+## Further Options
+
+The examples above use the default settings. The following arguments, common to `sysbreak()`, `varbreak()` and `netbreak()`, can be used to alter how the model is estimated and how inference is carried out.
+
+- `brv`: with `brv = TRUE`, the covariance matrix of the errors is allowed to change at the break dates. The default holds it constant.
+- `robust`: the default `"none"` gives the likelihood-ratio tests, valid when the errors are serially uncorrelated and conditionally homoskedastic. `"hc"` gives the robust SupF test of Qu and Perron (2007, eq. 20) with a heteroskedasticity-consistent covariance estimate, valid when the errors are a martingale difference sequence. `"hac"` also allows for serial correlation, using the quadratic spectral kernel with the automatic bandwidth of Andrews (1991). The choice also applies to the coefficient standard errors and the break-date confidence intervals. With `robust = "hac"`, `prewhit = TRUE` prewhitens the scores by a VAR(1) before the HAC estimation.
+- `hetq`: with `hetq = TRUE`, the regressor moments may differ across regimes when the break-date confidence intervals are computed. This is recommended when the distribution of the regressors changes across regimes, as in a VAR.
+- `restart`: the restricted estimator of the previous section is iterative and can stop at a local optimum. `restart = "brbp"` (resampling) or `"brbp_residual"` (residuals) restarts it from `restart_B` bootstrap samples (10 by default) and keeps the fit associated with the highest likelihood. It applies only when some coefficients are held constant.
+- `trim`: the minimum regime length is `round(trim * T)`. At least 3(n + k) observations are recommended, where n is the number of equations and k the number of regressors per equation.
+- `ci_level`: the coverage of the break-date confidence intervals, 0.95 (the default) or 0.90.
+
+For example, the basic model with inference robust to serial correlation and 90% confidence intervals is estimated by:
+
+```{r}
+fit_hac <- sysbreak(y ~ x, data = df, m = 2, robust = "hac", ci_level = 0.90)
+```
+
+## VAR Example and Types of Breaks
+
+`varbreak()` estimates structural breaks in a VAR. Its first argument is the matrix of the series, and the lag order is set by `lags`. The data below follow a bivariate VAR(1) whose coefficients are the same throughout, while at row 100 the volatility of `y1` doubles and the correlation of the errors rises from 0.2 to 0.7:
+
+```{r}
+set.seed(14)
+bigt_var <- 200
+A <- matrix(c(0.5, 0.1, 0.2, 0.4), 2, 2)
+chol1 <- t(chol(matrix(c(1, 0.2, 0.2, 1), 2, 2)))
+chol2 <- t(chol(matrix(c(4, 1.4, 1.4, 1), 2, 2)))
+y_var <- matrix(0, bigt_var, 2, dimnames = list(NULL, c("y1", "y2")))
+for (tt in 2:bigt_var) {
+  chol_t <- if (tt <= 100) chol1 else chol2
+  y_var[tt, ] <- A %*% y_var[tt - 1, ] + chol_t %*% rnorm(2)
+}
+```
+
+The model lets both the coefficients and the covariance matrix change (`brv = TRUE`). `hetq = TRUE` is used because the distribution of the lagged series changes with the volatility:
+
+```{r}
+var_fit <- varbreak(y_var, lags = 1, m = 2, brv = TRUE, hetq = TRUE)
+confint(var_fit)
+```
+
+One break is selected, at row 100. `brtype()` then tests, at each break date, whether the volatilities, the correlations and the coefficients differ between the two adjacent regimes:
+
+```{r}
+round(brtype(var_fit), 4)
+```
+
+The volatility and correlation tests reject, with p-values below 0.0001, while the coefficient test does not (p-value 0.55). The break is in the covariance matrix only, as in the simulated data.
+
+## Network VAR Example
+
+`netbreak()` estimates structural breaks in a Network VAR (Zhu et al., 2017) whose transition
+matrices are restricted by a fixed network matrix:
+
+\[
+y_t =
+\mu_j +
+\sum_{\ell=1}^p
+(\alpha_{\ell,j} W + \beta_{\ell,j} I)y_{t-\ell}
++ u_t .
+\]
+
+The argument `coef_breaks` controls which low-dimensional Network VAR
+parameters are allowed to change across regimes.
+
+```{r}
+set.seed(5)
+bigt_nvar <- 80
+W <- matrix(c(0, 1, 1, 0), 2, 2, byrow = TRUE)
+y_nvar <- matrix(0, bigt_nvar, 2)
+colnames(y_nvar) <- c("node1", "node2")
+
+for (tt in 2:bigt_nvar) {
+  alpha <- if (tt <= 40) 0.05 else 0.75
+  beta <- 0.1
+  y_nvar[tt, ] <- alpha * as.numeric(W %*% y_nvar[tt - 1, ]) +
+    beta * y_nvar[tt - 1, ] + rnorm(2, sd = 0.2)
+}
+
+nvar_fit <- netbreak(
+  y = y_nvar,
+  W = W,
+  lags = 1,
+  m = 1,
+  coef_breaks = c("network", "own"),
+  trim = 0.2,
+  h = 10
+)
+
+nvar_fit$estimation$breaks
+nvar_fit$spillover$regimes[[1]]$total
+```
+
+The same spillover engine can be called after estimation:
+
+```{r, eval = FALSE}
+spill <- dyspill(nvar_fit, h = 10)
+spill$regimes[[1]]$fevd
+spill$regimes[[1]]$from
+spill$regimes[[1]]$to
+spill$regimes[[1]]$net
+```
+
+## Ordered Two-Break Example
+
+`ordbreak()` estimates an ordered two-break model in which the equations in `set1` break at the first date and those in `set2` at the second. The test is that of Qu and Perron (2007, Section 6.4) for locally ordered breaks. The test for globally ordered breaks in their Section 6.5, whose limiting distribution differs, is not implemented.
+
+```{r}
+set.seed(13)
+bigt2 <- 60
+x1 <- rnorm(bigt2)
+x2 <- rnorm(bigt2)
+y1 <- 1 + 0.5 * x1 + rnorm(bigt2, sd = 0.3)
+y2 <- 1 + 0.5 * x2 + rnorm(bigt2, sd = 0.3)
+y1[21:bigt2] <- y1[21:bigt2] + 1.5 * x1[21:bigt2]
+y2[36:bigt2] <- y2[36:bigt2] - 1.5 * x2[36:bigt2]
+df2 <- data.frame(y1 = y1, y2 = y2, x1 = x1, x2 = x2)
+
+ordered_fit <- ordbreak(y1 ~ x1, y2 ~ x2, data = df2, trim = 0.2)
+
+ordered_fit$estimation$breaks
+```
+
+## Data Sets
+
+The package includes five data sets, each documented on its help page (for example, `?housing`):
+
+- `housing`: quarterly U.S. data from 1959:Q4 to 2009:Q3 on real GDP, consumption, real home prices and the federal funds rate, for the house price application of Ahamada and Diaz Sanchez (2013), to be used with `sysbreak()`.
+- `inflation`: monthly inflation for the G7 countries and the euro area from 1973:04 to 2007:12, from Bataa, Osborn, Sensier and van Dijk (2013), to be used with `varbreak()`.
+- `netsim`: one simulated draw from Scenario 1 of Han and Lee (2024), a Network VAR for 20 nodes over 300 periods with breaks after periods 100 and 200, to be used with `netbreak()`; it contains the series `y` and the network matrix `W`.
+- `data1` and `data2`: the example data of the original GAUSS programs of Qu and Perron (2007), for `sysbreak()` and `ordbreak()`, respectively.
+
+## Critical Values
+
+Critical values are computed internally, following Bai and Perron (2003), and reported at the significance
+level `test_level` (default 0.05). In the basic example above,
+`fit$testing$critical_values` has one entry for each candidate number of
+breaks \(1,\ldots,m\); the critical value of the WDmax test is
+`fit$testing$wdmax_critical_values`, and that of each sequential test is
+stored in the corresponding `fit$testing$sequential[[l]]` entry. Another
+level is obtained by refitting with a different `test_level` (0.10, 0.05,
+0.025, or 0.01).
+
+## References
+
+Qu, Z., and Perron, P. (2007). Estimating and testing structural changes in multivariate regressions. *Econometrica*, 75(2), 459-502.
+
+Bataa, E., Osborn, D. R., Sensier, M., and van Dijk, D. (2013). Structural breaks in the international dynamics of inflation. *Review of Economics and Statistics*, 95(2), 646-659.
+
+Bai, J., and Perron, P. (2003). Critical values for multiple structural change tests. *The Econometrics Journal*, 6(1), 72-78.
+
+Zhu, X., Pan, R., Li, G., Liu, Y., and Wang, H. (2017). Network vector autoregression. *The Annals of Statistics*, 45(3), 1096-1123.
+
+Diebold, F. X., and Yilmaz, K. (2012). Better to give than to receive: Predictive directional measurement of volatility spillovers. *International Journal of Forecasting*, 28(1), 57-66.
+
+Ahamada, I., and Diaz Sanchez, J. L. (2013). A retrospective analysis of the house price macro-relationship in the United States. *International Journal of Central Banking*, 9(4), 153-174.
+
+Han, Y., and Lee, T. C. M. (2024). Structural break detection in non-stationary network vector autoregression models. *IEEE Transactions on Network Science and Engineering*, 11(5), 4134-4145.
+
+Andrews, D. W. K. (1991). Heteroskedasticity and autocorrelation consistent covariance matrix estimation. *Econometrica*, 59(3), 817-858.
+
+## Session Info
+
+```{r}
+sessionInfo()
+```

@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Cheolju Kim, Pierre Perron, Zhongjun Qu" />
+
+<meta name="date" content="2026-10-20" />
+
+<title>Introduction to sysbreak</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Introduction to sysbreak</h1>
+<h4 class="author">Cheolju Kim, Pierre Perron, Zhongjun Qu</h4>
+<h4 class="date">2026-10-20</h4>
+
+
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>The <code>sysbreak</code> package provides methods for detecting,
+estimating, and conducting inference on multiple structural breaks in a
+linear system of equations, such as multivariate linear regressions,
+seemingly unrelated regressions, vector autoregressions, and network
+vector autoregressions. Breaks can occur in the regression coefficients,
+the covariance matrix of the errors, or both, and can be restricted to a
+subset of the coefficients.</p>
+<p>For observation <span class="math inline">\(t\)</span> in regime
+<span class="math inline">\(j\)</span>,</p>
+<p><span class="math display">\[
+y_t = Z_t \beta_j + u_t,
+\quad t = T_{j-1}+1,\ldots,T_j,
+\quad j = 1,\ldots,m+1.
+\]</span></p>
+<p>The unknown break dates are <span class="math inline">\(T_1,\ldots,T_m\)</span>. The package searches over
+admissible partitions subject to a trimming rule. It determines the
+number of breaks, gives the estimated break dates, the regime-specific
+parameters, and confidence intervals.</p>
+<p>The main reference is Qu and Perron (2007), which develops estimation
+and testing for structural changes in multivariate regressions.</p>
+</div>
+<div id="main-functions" class="section level2">
+<h2>Main Functions</h2>
+<p>The main user-facing functions are:</p>
+<ul>
+<li><code>sysbreak()</code> for a general linear system of equations,
+where the number of regressors can differ across equations.</li>
+<li><code>varbreak()</code> for structural breaks in VAR models.</li>
+<li><code>netbreak()</code> for structural breaks in Network
+models.</li>
+<li><code>ordbreak()</code> for ordered breaks in two sets of
+equations.</li>
+<li><code>brtype()</code> for tests of what changes at each break: the
+volatilities, the correlations, or the coefficients.</li>
+<li><code>dyspill()</code> for generalized Diebold-Yilmaz spillover
+measures from fitted VAR-type models.</li>
+<li><code>dynobreak()</code> for the same spillover measures from a VAR
+estimated on the whole sample without breaks, for comparison.</li>
+</ul>
+</div>
+<div id="basic-example" class="section level2">
+<h2>Basic Example</h2>
+<p>This example uses simulated data with two breaks.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(sysbreak)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">3</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>bigt <span class="ot">&lt;-</span> <span class="dv">60</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(bigt)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fu">rbind</span>(</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>  <span class="fu">c</span>(<span class="fl">1.0</span>,  <span class="fl">0.5</span>),</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>  <span class="fu">c</span>(<span class="fl">2.0</span>, <span class="sc">-</span><span class="fl">0.2</span>),</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>  <span class="fu">c</span>(<span class="fl">0.5</span>,  <span class="fl">0.8</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>)</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">numeric</span>(bigt)</span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>y[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>]  <span class="ot">&lt;-</span> beta[<span class="dv">1</span>, <span class="dv">1</span>] <span class="sc">+</span> beta[<span class="dv">1</span>, <span class="dv">2</span>] <span class="sc">*</span> x[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>]  <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">20</span>, <span class="at">sd =</span> <span class="fl">0.4</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>y[<span class="dv">21</span><span class="sc">:</span><span class="dv">40</span>] <span class="ot">&lt;-</span> beta[<span class="dv">2</span>, <span class="dv">1</span>] <span class="sc">+</span> beta[<span class="dv">2</span>, <span class="dv">2</span>] <span class="sc">*</span> x[<span class="dv">21</span><span class="sc">:</span><span class="dv">40</span>] <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">20</span>, <span class="at">sd =</span> <span class="fl">0.4</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>y[<span class="dv">41</span><span class="sc">:</span><span class="dv">60</span>] <span class="ot">&lt;-</span> beta[<span class="dv">3</span>, <span class="dv">1</span>] <span class="sc">+</span> beta[<span class="dv">3</span>, <span class="dv">2</span>] <span class="sc">*</span> x[<span class="dv">41</span><span class="sc">:</span><span class="dv">60</span>] <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">20</span>, <span class="at">sd =</span> <span class="fl">0.4</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y =</span> y, <span class="at">x =</span> x)</span></code></pre></div>
+<p>The model is given as a formula through <code>model</code>, with the
+data supplied in <code>data</code>. The intercept is included
+automatically. Which coefficients are allowed to change is controlled by
+<code>coef_breaks</code>; the default <code>&quot;all&quot;</code> lets every
+coefficient change across regimes. The model is estimated by:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">sysbreak</span>(y <span class="sc">~</span> x, <span class="at">data =</span> df, <span class="at">m =</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>The results are summarized by:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">summary</span>(fit)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; sysbreak: 1 equation, T = 60, m = 2, trim = 0.15, robust = none</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; Covariance matrix: constant across regimes</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; Tests for the number of breaks (5% level)</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;            Statistic Critical value  </span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;   WDmax       77.595         12.594 *</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;   SEQ(2|1)    63.080         13.472 *</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; Breaks selected: 2</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; Break dates (rows of the data) with 95% confidence intervals</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt;           Estimate Lower Upper</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt;   Break 1       20    19    21</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt;   Break 2       40    39    41</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; Regime 1 (rows 1 to 20)</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt;               Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; y:(Intercept)  1.10076    0.06468  17.018  &lt; 2e-16 ***</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; y:x            0.45801    0.08286   5.527 3.25e-08 ***</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; Regime 2 (rows 21 to 40)</span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt;               Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; y:(Intercept)  2.04581    0.06330   32.32  &lt; 2e-16 ***</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; y:x           -0.35734    0.07308   -4.89 1.01e-06 ***</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; Regime 3 (rows 41 to 60)</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt;               Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; y:(Intercept)  0.51638    0.06426   8.036 9.29e-16 ***</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; y:x            0.75479    0.06037  12.504  &lt; 2e-16 ***</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span></code></pre></div>
+<p>The output reports the tests used to select the number of breaks
+(WDmax and the sequential test of one against two breaks), the selected
+number of breaks, the break dates with their confidence intervals, and
+the coefficient estimates in each regime. Both tests reject, and two
+breaks are selected. The break dates and their confidence intervals are
+reported as rows of <code>df</code>. They are returned by
+<code>confint()</code>, and the regime coefficients by
+<code>coef()</code>; their covariance matrix is returned by
+<code>vcov()</code>:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">confint</span>(fit)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt;        2.5 % break 97.5 %</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; break1    19    20     21</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; break2    39    40     41</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="fu">coef</span>(fit)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; regime1:y:(Intercept)           regime1:y:x regime2:y:(Intercept) </span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;             1.1007640             0.4580116             2.0458059 </span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt;           regime2:y:x regime3:y:(Intercept)           regime3:y:x </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;            -0.3573438             0.5163846             0.7547884</span></span></code></pre></div>
+<p>The fit can be plotted. Each series is plotted with the estimated
+break dates, their confidence intervals and the fitted values:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">plot</span>(fit)</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<p>The SupLR statistics for one and two breaks, together with the other
+test results, are stored in <code>fit$testing</code>; see the next
+section.</p>
+</div>
+<div id="output-structure" class="section level2">
+<h2>Output Structure</h2>
+<p>The methods shown above extract the main results;
+<code>residuals()</code>, <code>fitted()</code> and <code>nobs()</code>
+are also available. The components returned by <code>sysbreak()</code>,
+<code>varbreak()</code>, and <code>netbreak()</code> are:</p>
+<ul>
+<li><code>spec</code>: the fitted specification, including
+<code>m</code>, <code>trim</code>, sample size, equation and coefficient
+dimensions, break options, and coefficient and observation names.</li>
+<li><code>testing</code>: the tests, reported at
+<code>test_level</code>: <code>statistic</code>, testing no break
+against <span class="math inline">\(k\)</span> breaks for <span class="math inline">\(k = 1,\ldots,m\)</span>, with its
+<code>critical_values</code>; <code>statistic_type</code>
+(<code>&quot;SupLR&quot;</code>, <code>&quot;SupF&quot;</code>, or missing when a requested
+robust test is unavailable); <code>wdmax</code> and
+<code>wdmax_critical_values</code>; the <code>sequential</code> tests of
+<span class="math inline">\(l\)</span> against <span class="math inline">\(l+1\)</span> breaks, each containing
+<code>l</code>, a <code>statistic</code> and its
+<code>critical_values</code>; and the number of
+<code>changing_parameters</code>.</li>
+<li><code>br_selected</code>: the selected number of breaks at
+<code>test_level</code>, with the WDmax and sequential decisions that
+led to that result.</li>
+<li><code>estimation</code>: the estimates for the selected number of
+breaks: <code>breaks</code>, regime-stacked <code>coefficients</code>,
+their covariance matrix <code>vcov</code>, stacked error
+<code>covariance</code> matrices, break-date confidence intervals
+<code>ci_breaks</code>, and the <code>residuals</code>. It is
+<code>NULL</code> when no break is selected; <code>coef()</code>,
+<code>vcov()</code>, <code>confint()</code> and <code>residuals()</code>
+then stop with a message that points to <code>testing</code>.</li>
+<li><code>y</code>: the responses used in estimation.</li>
+</ul>
+<p><code>varbreak()</code> and <code>netbreak()</code> also return
+<code>spillover</code> when <code>h</code> is supplied and at least one
+break is selected.</p>
+</div>
+<div id="restricted-estimation" class="section level2">
+<h2>Restricted Estimation</h2>
+<p>Instead of letting every coefficient change, the breaks can be
+restricted to a subset of the coefficients. The argument
+<code>coef_breaks</code> then takes a list of formulas, one per
+equation: the left-hand side identifies the equation and the right-hand
+side the coefficients that are allowed to change. All other coefficients
+are held constant across regimes.</p>
+<p>To illustrate, the data below keep the intercept at 1 in all regimes
+and let only the slope on <code>x</code> change, at the same dates as
+before:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">13</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>y_r <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="fl">0.5</span>, <span class="sc">-</span><span class="fl">0.2</span>, <span class="fl">0.8</span>), <span class="at">each =</span> <span class="dv">20</span>) <span class="sc">*</span> x <span class="sc">+</span> <span class="fu">rnorm</span>(bigt, <span class="at">sd =</span> <span class="fl">0.4</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>df_r <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y =</span> y_r, <span class="at">x =</span> x)</span></code></pre></div>
+<p>The model with only the slope allowed to change is estimated by:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>restricted_fit <span class="ot">&lt;-</span> <span class="fu">sysbreak</span>(y <span class="sc">~</span> x, <span class="at">data =</span> df_r, <span class="at">m =</span> <span class="dv">2</span>, <span class="at">coef_breaks =</span> <span class="fu">list</span>(y <span class="sc">~</span> x))</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">summary</span>(restricted_fit)</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; sysbreak: 1 equation, T = 60, m = 2, trim = 0.15, robust = none</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; Covariance matrix: constant across regimes</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; Tests for the number of breaks (5% level)</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;            Statistic Critical value  </span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt;   WDmax       33.034          9.567 *</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt;   SEQ(2|1)    24.074         10.187 *</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; Breaks selected: 2</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; Break dates (rows of the data) with 95% confidence intervals</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt;           Estimate Lower Upper</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;   Break 1       20    17    23</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt;   Break 2       40    38    42</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt; Coefficients allowed to change: y:x</span></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co">#&gt; Regime 1 (rows 1 to 20)</span></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt;               Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co">#&gt; y:(Intercept)  1.01180    0.04807  21.048  &lt; 2e-16 ***</span></span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co">#&gt; y:x            0.55702    0.10600   5.255 1.48e-07 ***</span></span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a><span class="co">#&gt; Regime 2 (rows 21 to 40)</span></span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a><span class="co">#&gt;               Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a><span class="co">#&gt; y:(Intercept)  1.01180    0.04807  21.048  &lt; 2e-16 ***</span></span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="co">#&gt; y:x           -0.30795    0.09485  -3.247  0.00117 ** </span></span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a><span class="co">#&gt; Regime 3 (rows 41 to 60)</span></span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a><span class="co">#&gt;               Estimate Std. Error z value Pr(&gt;|z|)    </span></span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a><span class="co">#&gt; y:(Intercept)  1.01180    0.04807   21.05   &lt;2e-16 ***</span></span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a><span class="co">#&gt; y:x            0.80879    0.07757   10.43   &lt;2e-16 ***</span></span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span></code></pre></div>
+<p>Two breaks are selected, at rows 20 and 40. The critical values are
+smaller than in the basic example, because fewer coefficients change.
+The line <code>Coefficients allowed to change</code> lists the
+coefficients that change; the intercept is estimated from the whole
+sample and is therefore the same in the three regimes. The returned
+components describe this restricted model; an unrestricted fit is not
+returned.</p>
+<p>A pure covariance-break model (no coefficient changes) is obtained
+with <code>coef_breaks = &quot;none&quot;</code> together with
+<code>brv = TRUE</code>. With <code>robust = &quot;hc&quot;</code> or
+<code>&quot;hac&quot;</code>, a covariance-only robust test is not implemented, so
+the test statistic and its type are returned as missing.</p>
+</div>
+<div id="further-options" class="section level2">
+<h2>Further Options</h2>
+<p>The examples above use the default settings. The following arguments,
+common to <code>sysbreak()</code>, <code>varbreak()</code> and
+<code>netbreak()</code>, can be used to alter how the model is estimated
+and how inference is carried out.</p>
+<ul>
+<li><code>brv</code>: with <code>brv = TRUE</code>, the covariance
+matrix of the errors is allowed to change at the break dates. The
+default holds it constant.</li>
+<li><code>robust</code>: the default <code>&quot;none&quot;</code> gives the
+likelihood-ratio tests, valid when the errors are serially uncorrelated
+and conditionally homoskedastic. <code>&quot;hc&quot;</code> gives the robust SupF
+test of Qu and Perron (2007, eq. 20) with a
+heteroskedasticity-consistent covariance estimate, valid when the errors
+are a martingale difference sequence. <code>&quot;hac&quot;</code> also allows for
+serial correlation, using the quadratic spectral kernel with the
+automatic bandwidth of Andrews (1991). The choice also applies to the
+coefficient standard errors and the break-date confidence intervals.
+With <code>robust = &quot;hac&quot;</code>, <code>prewhit = TRUE</code> prewhitens
+the scores by a VAR(1) before the HAC estimation.</li>
+<li><code>hetq</code>: with <code>hetq = TRUE</code>, the regressor
+moments may differ across regimes when the break-date confidence
+intervals are computed. This is recommended when the distribution of the
+regressors changes across regimes, as in a VAR.</li>
+<li><code>restart</code>: the restricted estimator of the previous
+section is iterative and can stop at a local optimum.
+<code>restart = &quot;brbp&quot;</code> (resampling) or
+<code>&quot;brbp_residual&quot;</code> (residuals) restarts it from
+<code>restart_B</code> bootstrap samples (10 by default) and keeps the
+fit associated with the highest likelihood. It applies only when some
+coefficients are held constant.</li>
+<li><code>trim</code>: the minimum regime length is
+<code>round(trim * T)</code>. At least 3(n + k) observations are
+recommended, where n is the number of equations and k the number of
+regressors per equation.</li>
+<li><code>ci_level</code>: the coverage of the break-date confidence
+intervals, 0.95 (the default) or 0.90.</li>
+</ul>
+<p>For example, the basic model with inference robust to serial
+correlation and 90% confidence intervals is estimated by:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>fit_hac <span class="ot">&lt;-</span> <span class="fu">sysbreak</span>(y <span class="sc">~</span> x, <span class="at">data =</span> df, <span class="at">m =</span> <span class="dv">2</span>, <span class="at">robust =</span> <span class="st">&quot;hac&quot;</span>, <span class="at">ci_level =</span> <span class="fl">0.90</span>)</span></code></pre></div>
+</div>
+<div id="var-example-and-types-of-breaks" class="section level2">
+<h2>VAR Example and Types of Breaks</h2>
+<p><code>varbreak()</code> estimates structural breaks in a VAR. Its
+first argument is the matrix of the series, and the lag order is set by
+<code>lags</code>. The data below follow a bivariate VAR(1) whose
+coefficients are the same throughout, while at row 100 the volatility of
+<code>y1</code> doubles and the correlation of the errors rises from 0.2
+to 0.7:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">14</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>bigt_var <span class="ot">&lt;-</span> <span class="dv">200</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.1</span>, <span class="fl">0.2</span>, <span class="fl">0.4</span>), <span class="dv">2</span>, <span class="dv">2</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>chol1 <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">chol</span>(<span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.2</span>, <span class="fl">0.2</span>, <span class="dv">1</span>), <span class="dv">2</span>, <span class="dv">2</span>)))</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>chol2 <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">chol</span>(<span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">4</span>, <span class="fl">1.4</span>, <span class="fl">1.4</span>, <span class="dv">1</span>), <span class="dv">2</span>, <span class="dv">2</span>)))</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>y_var <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, bigt_var, <span class="dv">2</span>, <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="cn">NULL</span>, <span class="fu">c</span>(<span class="st">&quot;y1&quot;</span>, <span class="st">&quot;y2&quot;</span>)))</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="cf">for</span> (tt <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>bigt_var) {</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>  chol_t <span class="ot">&lt;-</span> <span class="cf">if</span> (tt <span class="sc">&lt;=</span> <span class="dv">100</span>) chol1 <span class="cf">else</span> chol2</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  y_var[tt, ] <span class="ot">&lt;-</span> A <span class="sc">%*%</span> y_var[tt <span class="sc">-</span> <span class="dv">1</span>, ] <span class="sc">+</span> chol_t <span class="sc">%*%</span> <span class="fu">rnorm</span>(<span class="dv">2</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>}</span></code></pre></div>
+<p>The model lets both the coefficients and the covariance matrix change
+(<code>brv = TRUE</code>). <code>hetq = TRUE</code> is used because the
+distribution of the lagged series changes with the volatility:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>var_fit <span class="ot">&lt;-</span> <span class="fu">varbreak</span>(y_var, <span class="at">lags =</span> <span class="dv">1</span>, <span class="at">m =</span> <span class="dv">2</span>, <span class="at">brv =</span> <span class="cn">TRUE</span>, <span class="at">hetq =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="fu">confint</span>(var_fit)</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt;        2.5 % break 97.5 %</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co">#&gt; break1    99   100    115</span></span></code></pre></div>
+<p>One break is selected, at row 100. <code>brtype()</code> then tests,
+at each break date, whether the volatilities, the correlations and the
+coefficients differ between the two adjacent regimes:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">brtype</span>(var_fit), <span class="dv">4</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt;   breaks volatility volatility_p correlation correlation_p coefficients</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; 1    100    55.5739            0     20.7622             0       4.9234</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt;   coefficients_p</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; 1         0.5537</span></span></code></pre></div>
+<p>The volatility and correlation tests reject, with p-values below
+0.0001, while the coefficient test does not (p-value 0.55). The break is
+in the covariance matrix only, as in the simulated data.</p>
+</div>
+<div id="network-var-example" class="section level2">
+<h2>Network VAR Example</h2>
+<p><code>netbreak()</code> estimates structural breaks in a Network VAR
+(Zhu et al., 2017) whose transition matrices are restricted by a fixed
+network matrix:</p>
+<p><span class="math display">\[
+y_t =
+\mu_j +
+\sum_{\ell=1}^p
+(\alpha_{\ell,j} W + \beta_{\ell,j} I)y_{t-\ell}
++ u_t .
+\]</span></p>
+<p>The argument <code>coef_breaks</code> controls which low-dimensional
+Network VAR parameters are allowed to change across regimes.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">5</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>bigt_nvar <span class="ot">&lt;-</span> <span class="dv">80</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>W <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>), <span class="dv">2</span>, <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>y_nvar <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, bigt_nvar, <span class="dv">2</span>)</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="fu">colnames</span>(y_nvar) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;node1&quot;</span>, <span class="st">&quot;node2&quot;</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="cf">for</span> (tt <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>bigt_nvar) {</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>  alpha <span class="ot">&lt;-</span> <span class="cf">if</span> (tt <span class="sc">&lt;=</span> <span class="dv">40</span>) <span class="fl">0.05</span> <span class="cf">else</span> <span class="fl">0.75</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>  beta <span class="ot">&lt;-</span> <span class="fl">0.1</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>  y_nvar[tt, ] <span class="ot">&lt;-</span> alpha <span class="sc">*</span> <span class="fu">as.numeric</span>(W <span class="sc">%*%</span> y_nvar[tt <span class="sc">-</span> <span class="dv">1</span>, ]) <span class="sc">+</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>    beta <span class="sc">*</span> y_nvar[tt <span class="sc">-</span> <span class="dv">1</span>, ] <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">2</span>, <span class="at">sd =</span> <span class="fl">0.2</span>)</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>}</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>nvar_fit <span class="ot">&lt;-</span> <span class="fu">netbreak</span>(</span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>  <span class="at">y =</span> y_nvar,</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>  <span class="at">W =</span> W,</span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a>  <span class="at">lags =</span> <span class="dv">1</span>,</span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a>  <span class="at">m =</span> <span class="dv">1</span>,</span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a>  <span class="at">coef_breaks =</span> <span class="fu">c</span>(<span class="st">&quot;network&quot;</span>, <span class="st">&quot;own&quot;</span>),</span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a>  <span class="at">trim =</span> <span class="fl">0.2</span>,</span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a>  <span class="at">h =</span> <span class="dv">10</span></span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a>)</span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a></span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a>nvar_fit<span class="sc">$</span>estimation<span class="sc">$</span>breaks</span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a><span class="co">#&gt; [1] 45</span></span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a>nvar_fit<span class="sc">$</span>spillover<span class="sc">$</span>regimes[[<span class="dv">1</span>]]<span class="sc">$</span>total</span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co">#&gt; [1] 2.193206</span></span></code></pre></div>
+<p>The same spillover engine can be called after estimation:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>spill <span class="ot">&lt;-</span> <span class="fu">dyspill</span>(nvar_fit, <span class="at">h =</span> <span class="dv">10</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>spill<span class="sc">$</span>regimes[[<span class="dv">1</span>]]<span class="sc">$</span>fevd</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>spill<span class="sc">$</span>regimes[[<span class="dv">1</span>]]<span class="sc">$</span>from</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>spill<span class="sc">$</span>regimes[[<span class="dv">1</span>]]<span class="sc">$</span>to</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>spill<span class="sc">$</span>regimes[[<span class="dv">1</span>]]<span class="sc">$</span>net</span></code></pre></div>
+</div>
+<div id="ordered-two-break-example" class="section level2">
+<h2>Ordered Two-Break Example</h2>
+<p><code>ordbreak()</code> estimates an ordered two-break model in which
+the equations in <code>set1</code> break at the first date and those in
+<code>set2</code> at the second. The test is that of Qu and Perron
+(2007, Section 6.4) for locally ordered breaks. The test for globally
+ordered breaks in their Section 6.5, whose limiting distribution
+differs, is not implemented.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">13</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>bigt2 <span class="ot">&lt;-</span> <span class="dv">60</span></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>x1 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(bigt2)</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>x2 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(bigt2)</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>y1 <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> x1 <span class="sc">+</span> <span class="fu">rnorm</span>(bigt2, <span class="at">sd =</span> <span class="fl">0.3</span>)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>y2 <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> x2 <span class="sc">+</span> <span class="fu">rnorm</span>(bigt2, <span class="at">sd =</span> <span class="fl">0.3</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>y1[<span class="dv">21</span><span class="sc">:</span>bigt2] <span class="ot">&lt;-</span> y1[<span class="dv">21</span><span class="sc">:</span>bigt2] <span class="sc">+</span> <span class="fl">1.5</span> <span class="sc">*</span> x1[<span class="dv">21</span><span class="sc">:</span>bigt2]</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>y2[<span class="dv">36</span><span class="sc">:</span>bigt2] <span class="ot">&lt;-</span> y2[<span class="dv">36</span><span class="sc">:</span>bigt2] <span class="sc">-</span> <span class="fl">1.5</span> <span class="sc">*</span> x2[<span class="dv">36</span><span class="sc">:</span>bigt2]</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>df2 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y1 =</span> y1, <span class="at">y2 =</span> y2, <span class="at">x1 =</span> x1, <span class="at">x2 =</span> x2)</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>ordered_fit <span class="ot">&lt;-</span> <span class="fu">ordbreak</span>(y1 <span class="sc">~</span> x1, y2 <span class="sc">~</span> x2, <span class="at">data =</span> df2, <span class="at">trim =</span> <span class="fl">0.2</span>)</span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>ordered_fit<span class="sc">$</span>estimation<span class="sc">$</span>breaks</span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt; [1] 20 35</span></span></code></pre></div>
+</div>
+<div id="data-sets" class="section level2">
+<h2>Data Sets</h2>
+<p>The package includes five data sets, each documented on its help page
+(for example, <code>?housing</code>):</p>
+<ul>
+<li><code>housing</code>: quarterly U.S. data from 1959:Q4 to 2009:Q3 on
+real GDP, consumption, real home prices and the federal funds rate, for
+the house price application of Ahamada and Diaz Sanchez (2013), to be
+used with <code>sysbreak()</code>.</li>
+<li><code>inflation</code>: monthly inflation for the G7 countries and
+the euro area from 1973:04 to 2007:12, from Bataa, Osborn, Sensier and
+van Dijk (2013), to be used with <code>varbreak()</code>.</li>
+<li><code>netsim</code>: one simulated draw from Scenario 1 of Han and
+Lee (2024), a Network VAR for 20 nodes over 300 periods with breaks
+after periods 100 and 200, to be used with <code>netbreak()</code>; it
+contains the series <code>y</code> and the network matrix
+<code>W</code>.</li>
+<li><code>data1</code> and <code>data2</code>: the example data of the
+original GAUSS programs of Qu and Perron (2007), for
+<code>sysbreak()</code> and <code>ordbreak()</code>, respectively.</li>
+</ul>
+</div>
+<div id="critical-values" class="section level2">
+<h2>Critical Values</h2>
+<p>Critical values are computed internally, following Bai and Perron
+(2003), and reported at the significance level <code>test_level</code>
+(default 0.05). In the basic example above,
+<code>fit$testing$critical_values</code> has one entry for each
+candidate number of breaks <span class="math inline">\(1,\ldots,m\)</span>; the critical value of the
+WDmax test is <code>fit$testing$wdmax_critical_values</code>, and that
+of each sequential test is stored in the corresponding
+<code>fit$testing$sequential[[l]]</code> entry. Another level is
+obtained by refitting with a different <code>test_level</code> (0.10,
+0.05, 0.025, or 0.01).</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>Qu, Z., and Perron, P. (2007). Estimating and testing structural
+changes in multivariate regressions. <em>Econometrica</em>, 75(2),
+459-502.</p>
+<p>Bataa, E., Osborn, D. R., Sensier, M., and van Dijk, D. (2013).
+Structural breaks in the international dynamics of inflation. <em>Review
+of Economics and Statistics</em>, 95(2), 646-659.</p>
+<p>Bai, J., and Perron, P. (2003). Critical values for multiple
+structural change tests. <em>The Econometrics Journal</em>, 6(1),
+72-78.</p>
+<p>Zhu, X., Pan, R., Li, G., Liu, Y., and Wang, H. (2017). Network
+vector autoregression. <em>The Annals of Statistics</em>, 45(3),
+1096-1123.</p>
+<p>Diebold, F. X., and Yilmaz, K. (2012). Better to give than to
+receive: Predictive directional measurement of volatility spillovers.
+<em>International Journal of Forecasting</em>, 28(1), 57-66.</p>
+<p>Ahamada, I., and Diaz Sanchez, J. L. (2013). A retrospective analysis
+of the house price macro-relationship in the United States.
+<em>International Journal of Central Banking</em>, 9(4), 153-174.</p>
+<p>Han, Y., and Lee, T. C. M. (2024). Structural break detection in
+non-stationary network vector autoregression models. <em>IEEE
+Transactions on Network Science and Engineering</em>, 11(5),
+4134-4145.</p>
+<p>Andrews, D. W. K. (1991). Heteroskedasticity and autocorrelation
+consistent covariance matrix estimation. <em>Econometrica</em>, 59(3),
+817-858.</p>
+</div>
+<div id="session-info" class="section level2">
+<h2>Session Info</h2>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="co">#&gt; R version 4.4.3 (2025-02-28 ucrt)</span></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="co">#&gt; Platform: x86_64-w64-mingw32/x64</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt; Running under: Windows 11 x64 (build 26200)</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt; [1] LC_COLLATE=C                          </span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co">#&gt; [2] LC_CTYPE=English_United States.utf8   </span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co">#&gt; [3] LC_MONETARY=English_United States.utf8</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="co">#&gt; [4] LC_NUMERIC=C                          </span></span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="co">#&gt; [5] LC_TIME=English_United States.utf8    </span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="co">#&gt; time zone: America/New_York</span></span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a><span class="co">#&gt; [1] sysbreak_1.1.0</span></span>
+<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.37     R6_2.6.1          fastmap_1.2.0     xfun_0.53        </span></span>
+<span id="cb15-27"><a href="#cb15-27" tabindex="-1"></a><span class="co">#&gt;  [5] cachem_1.1.0      knitr_1.50        htmltools_0.5.8.1 rmarkdown_2.29   </span></span>
+<span id="cb15-28"><a href="#cb15-28" tabindex="-1"></a><span class="co">#&gt;  [9] lifecycle_1.0.4   cli_3.6.4         sass_0.4.9        jquerylib_0.1.4  </span></span>
+<span id="cb15-29"><a href="#cb15-29" tabindex="-1"></a><span class="co">#&gt; [13] compiler_4.4.3    rstudioapi_0.17.1 tools_4.4.3       evaluate_1.0.3   </span></span>
+<span id="cb15-30"><a href="#cb15-30" tabindex="-1"></a><span class="co">#&gt; [17] bslib_0.9.0       yaml_2.3.10       rlang_1.1.5       jsonlite_1.9.1   </span></span>
+<span id="cb15-31"><a href="#cb15-31" tabindex="-1"></a><span class="co">#&gt; [21] MASS_7.3-64</span></span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
